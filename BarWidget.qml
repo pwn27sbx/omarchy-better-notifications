@@ -665,7 +665,7 @@ BarWidget {
             }
 
             function deleteNotification() {
-              root.bar.run("rm -f '" + root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json'")
+              root.bar.run("rm -f " + root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json")
               reloadTimer.start()
             }
             
