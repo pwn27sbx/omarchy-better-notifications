@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "hero-notifications",
+  "name": "Hero Notification Center",
+  "version": "1.0.0",
+  "author": "pwnsxb & Gabi",
+  "license": "MIT",
+  "description": "A beautiful, native notification history center for Omarchy 4.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Hero Notifications",
+    "description": "View your notification history natively.",
+    "category": "System",
+    "defaultSection": "right",
+    "allowMultiple": false
+  }
+}
