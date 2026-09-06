@@ -582,11 +582,23 @@ BarWidget {
   
           MouseArea {
             anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
-            onEntered: delegateBg.color = bar ? Qt.rgba(bar.foreground.r, bar.foreground.g, bar.foreground.b, 0.06) : "rgba(255,255,255,0.06)"
-            onExited: delegateBg.color = "transparent"
-            onClicked: {
+            onEntered: {
+              delegateBg.color = bar ? Qt.rgba(bar.foreground.r, bar.foreground.g, bar.foreground.b, 0.06) : "rgba(255,255,255,0.06)"
+              deleteBtn.visible = true
+            }
+            onExited: {
+              delegateBg.color = "transparent"
+              deleteBtn.visible = false
+            }
+            onClicked: function(mouse) {
+              if (mouse.button === Qt.RightButton) {
+                deleteNotification()
+                return
+              }
+              
               var executed = false
               if (model.execArgv && model.execArgv.trim() !== "") {
                 try {
@@ -606,6 +618,41 @@ BarWidget {
                 root.bar.run("/usr/share/omarchy/bin/omarchy-hyprland-focus-app '" + model.app.replace(/'/g, "'\\''") + "'")
               }
               root.opened = false
+            }
+          }
+
+          function deleteNotification() {
+            root.bar.run("rm -f ~/.local/state/omarchy/notifications/history/" + model.timestamp + "-" + model.originalId + ".json")
+            activeModel.remove(index)
+          }
+
+          // Botón de eliminar (X) al hacer hover
+          Rectangle {
+            id: deleteBtn
+            visible: false
+            width: Style.space(24)
+            height: Style.space(24)
+            radius: width / 2
+            color: deleteMouse.containsMouse ? "rgba(255,0,0,0.5)" : "rgba(255,0,0,0.2)"
+            anchors.right: parent.right
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            z: 10
+
+            Text {
+              anchors.centerIn: parent
+              text: "✕"
+              color: "white"
+              font.pixelSize: Style.font.bodySmall
+              font.bold: true
+            }
+
+            MouseArea {
+              id: deleteMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: delegateBg.deleteNotification()
             }
           }
           Image {
