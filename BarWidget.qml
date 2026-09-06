@@ -608,13 +608,26 @@ BarWidget {
               root.opened = false
             }
           }
+          Image {
+            id: appIconImg
+            anchors.left: parent.left
+            anchors.leftMargin: (model.app !== "omarchy-action") ? Style.space(8) : 0
+            anchors.verticalCenter: contentCol.verticalCenter
+            source: (model.appIcon && model.appIcon !== "") ? "image://icon/" + model.appIcon : ("image://icon/" + (model.app || "dialog-information"))
+            width: (model.app !== "omarchy-action") ? Style.space(34) : 0
+            height: (model.app !== "omarchy-action") ? Style.space(34) : 0
+            sourceSize.width: Style.space(34)
+            sourceSize.height: Style.space(34)
+            smooth: true
+            visible: (model.app !== "omarchy-action") && status === Image.Ready
+          }
   
           Column {
             id: contentCol
-            anchors.left: parent.left
+            anchors.left: appIconImg.right
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.leftMargin: Style.space(12)
+            anchors.leftMargin: (model.app !== "omarchy-action") ? Style.space(10) : Style.space(12)
             anchors.rightMargin: Style.space(4)
             anchors.topMargin: Style.space(6)
             spacing: Style.space(4)
