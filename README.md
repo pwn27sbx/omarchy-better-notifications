@@ -23,13 +23,19 @@ Installing this plugin is incredibly simple thanks to Omarchy's native plugin ma
    ```bash
    omarchy plugin add
    ```
-3. When prompted for the Git URL, paste the link to this repository:
+3. When prompted for the Git URL, paste the exact link to this repository:
    ```text
    https://github.com/pwn27sbx/omarchy-better-notifications.git
    ```
-   *(Make sure to replace `pwn27sbx` con tu usuario real)*
 
 Omarchy will automatically clone the repository, install it into your `~/.local/share/omarchy/plugins/` directory, and load it into your shell.
+
+## 🗑️ Removal
+
+If you ever wish to uninstall the plugin and return to the default Omarchy notifications, simply run:
+```bash
+omarchy plugin remove hero-notifications
+```
 
 ## 🛠️ Usage & Configuration
 
