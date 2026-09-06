@@ -629,7 +629,9 @@ BarWidget {
 
                 if (mouse.button === Qt.RightButton) {
                   delegateContainer.isDeleted = true
-                  deleteNotification()
+                  var targetFile = root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json"
+                  root.bar.run("/usr/bin/rm -f " + targetFile)
+                  reloadTimer.start()
                   return
                 }
                 
@@ -660,13 +662,10 @@ BarWidget {
               interval: 200
               onTriggered: {
                 delegateContainer.isDeleted = true
-                deleteNotification()
+                var targetFile = root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json"
+                root.bar.run("/usr/bin/rm -f " + targetFile)
+                reloadTimer.start()
               }
-            }
-
-            function deleteNotification() {
-              root.bar.run("/usr/bin/rm -f " + root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json")
-              reloadTimer.start()
             }
             
             Timer {
