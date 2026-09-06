@@ -665,15 +665,8 @@ BarWidget {
             }
 
             function deleteNotification() {
-              var cmd = "rm -f " + root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json"
-              deleteProc.command = ["bash", "-c", "echo '" + cmd + "' >> /tmp/omarchy_delete.log; " + cmd]
-              deleteProc.running = true
-            }
-            
-            Process {
-              id: deleteProc
-              running: false
-              onExited: reloadTimer.start()
+              root.bar.run("/usr/bin/rm -f " + root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json")
+              reloadTimer.start()
             }
             
             Timer {
