@@ -4,6 +4,11 @@ A powerful, highly-dense, and beautifully organized notification center replacem
 
 Tired of messy notification lists? **Better Notifications** overhauls the default Omarchy notification panel to bring a sleek, hacker-friendly aesthetic with modern features like App-grouping (Windows 11 / macOS style) and rich media previews.
 
+<p align="center">
+  <img src="assets/alerts.png" width="45%" />
+  <img src="assets/captures.png" width="45%" />
+</p>
+
 ## ✨ Features
 
 - **📱 Smart App Grouping:** Automatically groups notifications by application. The app with the most recent activity bubbles to the top!
