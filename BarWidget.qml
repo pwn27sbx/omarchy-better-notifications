@@ -574,7 +574,11 @@ BarWidget {
         delegate: Item {
           id: delegateContainer
           width: ListView.view.width
-          height: delegateBg.height
+          height: isDeleted ? 0 : delegateBg.height
+          clip: true
+          property bool isDeleted: false
+          
+          Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
 
           Rectangle {
             id: delegateBg
@@ -614,17 +618,17 @@ BarWidget {
                   delegateBg.x = (delegateBg.x > 0) ? delegateContainer.width : -delegateContainer.width
                   destroyTimer.start()
                 } else if (delegateBg.x !== 0) {
-                  // No deslizó lo suficiente, regresamos a la posición original (efecto liga)
+                  // No deslizó lo suficiente, regresamos a la posición original
                   xBehavior.enabled = true
                   delegateBg.x = 0
                 }
               }
 
               onClicked: function(mouse) {
-                // Prevenir clics accidentales si el usuario estaba arrastrando
                 if (Math.abs(delegateBg.x) > 5) return
 
                 if (mouse.button === Qt.RightButton) {
+                  delegateContainer.isDeleted = true
                   deleteNotification()
                   return
                 }
@@ -654,12 +658,21 @@ BarWidget {
             Timer {
               id: destroyTimer
               interval: 200
-              onTriggered: deleteNotification()
+              onTriggered: {
+                delegateContainer.isDeleted = true
+                deleteNotification()
+              }
             }
 
             function deleteNotification() {
               root.bar.run("rm -f ~/.local/state/omarchy/notifications/history/" + model.timestamp + "-" + model.originalId + ".json")
-              activeModel.remove(index)
+              reloadTimer.start()
+            }
+            
+            Timer {
+              id: reloadTimer
+              interval: 250
+              onTriggered: reader.exec()
             }
           Image {
             id: appIconImg
