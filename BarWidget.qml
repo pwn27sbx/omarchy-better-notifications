@@ -665,8 +665,14 @@ BarWidget {
             }
 
             function deleteNotification() {
-              root.bar.run("rm -f " + root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json")
-              reloadTimer.start()
+              deleteProc.command = ["rm", "-f", root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json"]
+              deleteProc.running = true
+            }
+            
+            Process {
+              id: deleteProc
+              running: false
+              onExited: reloadTimer.start()
             }
             
             Timer {
