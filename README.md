@@ -21,6 +21,9 @@ Tired of messy notification lists? **Better Notifications** overhauls the defaul
 
 ## 🚀 Installation
 
+### Requirements
+- `jq` (Standard on most Linux distributions, used for reading history files).
+
 Installing this plugin is incredibly simple thanks to Omarchy's native plugin manager.
 
 1. Open your terminal.
@@ -47,3 +50,6 @@ Once installed, the widget integrates directly into your Omarchy top bar.
 
 ## 🤝 Contributing
 Feel free to open an issue or submit a Pull Request if you have ideas to make this notification center even better!
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
