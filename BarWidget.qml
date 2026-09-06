@@ -571,96 +571,90 @@ BarWidget {
           }
         }
   
-        delegate: Item {
-          id: delegateContainer
+        delegate: Rectangle {
+          id: delegateBg
           width: ListView.view.width
-          height: delegateBg.height
+          height: contentCol.implicitHeight + Style.space(12)
+          color: "transparent"
+          radius: Style.cornerRadius
+          
+          Behavior on color { ColorAnimation { duration: 100 } }
+  
+          MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            cursorShape: Qt.PointingHandCursor
+            hoverEnabled: true
+            onEntered: {
+              delegateBg.color = bar ? Qt.rgba(bar.foreground.r, bar.foreground.g, bar.foreground.b, 0.06) : "rgba(255,255,255,0.06)"
+              deleteBtn.visible = true
+            }
+            onExited: {
+              delegateBg.color = "transparent"
+              deleteBtn.visible = false
+            }
+            onClicked: function(mouse) {
+              if (mouse.button === Qt.RightButton) {
+                deleteNotification()
+                return
+              }
+              
+              var executed = false
+              if (model.execArgv && model.execArgv.trim() !== "") {
+                try {
+                  var cmdArray = JSON.parse(model.execArgv)
+                  if (Array.isArray(cmdArray) && cmdArray.length > 0) {
+                    var escapedStr = ""
+                    for (var j = 0; j < cmdArray.length; j++) {
+                      escapedStr += "'" + String(cmdArray[j]).replace(/'/g, "'\\''") + "' "
+                    }
+                    root.bar.run(escapedStr)
+                    executed = true
+                  }
+                } catch(e) {}
+              } 
+              
+              if (!executed && model.app && model.app.trim() !== "") {
+                root.bar.run("/usr/share/omarchy/bin/omarchy-hyprland-focus-app '" + model.app.replace(/'/g, "'\\''") + "'")
+              }
+              root.opened = false
+            }
+          }
 
+          function deleteNotification() {
+            root.bar.run("rm -f ~/.local/state/omarchy/notifications/history/" + model.timestamp + "-" + model.originalId + ".json")
+            activeModel.remove(index)
+          }
+
+          // Botón de eliminar (X) al hacer hover
           Rectangle {
-            id: delegateBg
-            width: parent.width
-            height: contentCol.implicitHeight + Style.space(12)
-            color: "transparent"
-            radius: Style.cornerRadius
-            
-            Behavior on x {
-              id: xBehavior
-              enabled: false
-              NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
+            id: deleteBtn
+            visible: false
+            width: Style.space(24)
+            height: Style.space(24)
+            radius: width / 2
+            color: deleteMouse.containsMouse ? "rgba(255,0,0,0.5)" : "rgba(255,0,0,0.2)"
+            anchors.right: parent.right
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            z: 10
+
+            Text {
+              anchors.centerIn: parent
+              text: "✕"
+              color: "white"
+              font.pixelSize: Style.font.bodySmall
+              font.bold: true
             }
 
             MouseArea {
+              id: deleteMouse
               anchors.fill: parent
-              acceptedButtons: Qt.LeftButton | Qt.RightButton
-              cursorShape: Qt.PointingHandCursor
               hoverEnabled: true
-              
-              drag.target: delegateBg
-              drag.axis: Drag.XAxis
-              drag.minimumX: -delegateContainer.width
-              drag.maximumX: delegateContainer.width
-
-              onEntered: delegateBg.color = bar ? Qt.rgba(bar.foreground.r, bar.foreground.g, bar.foreground.b, 0.06) : "rgba(255,255,255,0.06)"
-              onExited: delegateBg.color = "transparent"
-              
-              onPressed: {
-                xBehavior.enabled = false
-              }
-              
-              onReleased: function(mouse) {
-                if (Math.abs(delegateBg.x) > delegateContainer.width / 3) {
-                  // Deslizó lo suficiente, salimos volando y borramos
-                  xBehavior.enabled = true
-                  delegateBg.x = (delegateBg.x > 0) ? delegateContainer.width : -delegateContainer.width
-                  destroyTimer.start()
-                } else if (delegateBg.x !== 0) {
-                  // No deslizó lo suficiente, regresamos a la posición original (efecto liga)
-                  xBehavior.enabled = true
-                  delegateBg.x = 0
-                }
-              }
-
-              onClicked: function(mouse) {
-                // Prevenir clics accidentales si el usuario estaba arrastrando
-                if (Math.abs(delegateBg.x) > 5) return
-
-                if (mouse.button === Qt.RightButton) {
-                  deleteNotification()
-                  return
-                }
-                
-                var executed = false
-                if (model.execArgv && model.execArgv.trim() !== "") {
-                  try {
-                    var cmdArray = JSON.parse(model.execArgv)
-                    if (Array.isArray(cmdArray) && cmdArray.length > 0) {
-                      var escapedStr = ""
-                      for (var j = 0; j < cmdArray.length; j++) {
-                        escapedStr += "'" + String(cmdArray[j]).replace(/'/g, "'\\''") + "' "
-                      }
-                      root.bar.run(escapedStr)
-                      executed = true
-                    }
-                  } catch(e) {}
-                } 
-                
-                if (!executed && model.app && model.app.trim() !== "") {
-                  root.bar.run("/usr/share/omarchy/bin/omarchy-hyprland-focus-app '" + model.app.replace(/'/g, "'\\''") + "'")
-                }
-                root.opened = false
-              }
+              cursorShape: Qt.PointingHandCursor
+              onClicked: delegateBg.deleteNotification()
             }
-
-            Timer {
-              id: destroyTimer
-              interval: 200
-              onTriggered: deleteNotification()
-            }
-
-            function deleteNotification() {
-              root.bar.run("rm -f ~/.local/state/omarchy/notifications/history/" + model.timestamp + "-" + model.originalId + ".json")
-              activeModel.remove(index)
-            }
+          }
           Image {
             id: appIconImg
             anchors.left: parent.left
