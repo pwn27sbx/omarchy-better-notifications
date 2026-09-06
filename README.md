@@ -19,13 +19,9 @@ Tired of messy notification lists? **Better Notifications** overhauls the defaul
 Installing this plugin is incredibly simple thanks to Omarchy's native plugin manager.
 
 1. Open your terminal.
-2. Run the following command:
+2. Run the following one-liner command:
    ```bash
-   omarchy plugin add
-   ```
-3. When prompted for the Git URL, paste the exact link to this repository:
-   ```text
-   https://github.com/pwn27sbx/omarchy-better-notifications.git
+   omarchy plugin add https://github.com/pwn27sbx/omarchy-better-notifications.git --enable
    ```
 
 Omarchy will automatically clone the repository, install it into your `~/.local/share/omarchy/plugins/` directory, and load it into your shell.
