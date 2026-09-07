@@ -712,7 +712,7 @@ BarWidget {
             
             Text {
               anchors.centerIn: parent
-              anchors.verticalCenterOffset: -1
+              anchors.verticalCenterOffset: 1
               text: model.app ? model.app.charAt(0).toUpperCase() : "?"
               font.pixelSize: Math.round(Style.font.bodyLarge * 1.2)
               font.bold: true
