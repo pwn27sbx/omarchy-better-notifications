@@ -44,13 +44,7 @@ BarWidget {
   }
 
   function getAppColor(appName) {
-    if (!appName) return Color.accent
-    var hash = 0
-    for (var i = 0; i < appName.length; i++) {
-      hash = appName.charCodeAt(i) + ((hash << 5) - hash)
-    }
-    var h = Math.abs(hash) % 360
-    return Qt.hsla(h / 360, 0.65, 0.6, 1)
+    return Color.accent
   }
 
   property bool isDnd: false
@@ -718,10 +712,13 @@ BarWidget {
             
             Text {
               anchors.centerIn: parent
+              anchors.verticalCenterOffset: -1
               text: model.app ? model.app.charAt(0).toUpperCase() : "?"
-              font.pixelSize: Style.font.bodyLarge
+              font.pixelSize: Math.round(Style.font.bodyLarge * 1.2)
               font.bold: true
-              color: "#ffffff"
+              color: Color.background
+              verticalAlignment: Text.AlignVCenter
+              horizontalAlignment: Text.AlignHCenter
             }
           }
   
