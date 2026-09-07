@@ -33,6 +33,12 @@ BarWidget {
     return Math.floor(diff / 86400) + "d"
   }
 
+  function getAppIcon(app, appIcon) {
+    if (app === "Omamail") return "image://icon/mail-unread"
+    if (appIcon && appIcon !== "") return "image://icon/" + appIcon
+    return "image://icon/" + (app || "dialog-information")
+  }
+
   property bool isDnd: false
   property bool showSettings: false
   property bool splitScreenshots: true // Activado por defecto
@@ -678,7 +684,7 @@ BarWidget {
             anchors.left: parent.left
             anchors.leftMargin: (model.app !== "omarchy-action") ? Style.space(8) : 0
             anchors.verticalCenter: contentCol.verticalCenter
-            source: (model.appIcon && model.appIcon !== "") ? "image://icon/" + model.appIcon : ("image://icon/" + (model.app || "dialog-information"))
+            source: root.getAppIcon(model.app, model.appIcon)
             width: (model.app !== "omarchy-action") ? Style.space(34) : 0
             height: (model.app !== "omarchy-action") ? Style.space(34) : 0
             sourceSize.width: Style.space(34)
