@@ -43,6 +43,16 @@ BarWidget {
     return ""
   }
 
+  function getAppColor(appName) {
+    if (!appName) return Color.accent
+    var hash = 0
+    for (var i = 0; i < appName.length; i++) {
+      hash = appName.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    var h = Math.abs(hash) % 360
+    return Qt.hsla(h / 360, 0.65, 0.6, 1)
+  }
+
   property bool isDnd: false
   property bool showSettings: false
   property bool splitScreenshots: true // Activado por defecto
@@ -686,15 +696,33 @@ BarWidget {
           Image {
             id: appIconImg
             anchors.left: parent.left
-            anchors.leftMargin: (model.app !== "omarchy-action" && source != "") ? Style.space(8) : 0
+            anchors.leftMargin: (model.app !== "omarchy-action") ? Style.space(8) : 0
             anchors.verticalCenter: contentCol.verticalCenter
             source: root.getAppIcon(model.app, model.appIcon)
-            width: (model.app !== "omarchy-action" && source != "") ? Style.space(34) : 0
-            height: (model.app !== "omarchy-action" && source != "") ? Style.space(34) : 0
+            width: (model.app !== "omarchy-action") ? Style.space(34) : 0
+            height: (model.app !== "omarchy-action") ? Style.space(34) : 0
             sourceSize.width: Style.space(34)
             sourceSize.height: Style.space(34)
             smooth: true
             visible: (model.app !== "omarchy-action") && source != "" && status === Image.Ready
+          }
+
+          Rectangle {
+            id: fallbackIcon
+            anchors.centerIn: appIconImg
+            width: appIconImg.width
+            height: appIconImg.height
+            radius: width / 2
+            color: root.getAppColor(model.app)
+            visible: (model.app !== "omarchy-action") && (!appIconImg.visible)
+            
+            Text {
+              anchors.centerIn: parent
+              text: model.app ? model.app.charAt(0).toUpperCase() : "?"
+              font.pixelSize: Style.font.bodyLarge
+              font.bold: true
+              color: "#ffffff"
+            }
           }
   
           Column {
@@ -702,7 +730,7 @@ BarWidget {
             anchors.left: appIconImg.right
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.leftMargin: (model.app !== "omarchy-action" && appIconImg.source != "") ? Style.space(10) : Style.space(12)
+            anchors.leftMargin: (model.app !== "omarchy-action") ? Style.space(10) : Style.space(12)
             anchors.rightMargin: Style.space(4)
             anchors.topMargin: Style.space(6)
             spacing: Style.space(4)
