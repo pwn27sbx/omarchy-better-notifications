@@ -34,9 +34,13 @@ BarWidget {
   }
 
   function getAppIcon(app, appIcon) {
-    if (app === "Omamail") return "image://icon/mail-unread"
-    if (appIcon && appIcon !== "") return "image://icon/" + appIcon
-    return "image://icon/" + (app || "dialog-information")
+    if (appIcon && appIcon !== "" && Quickshell.iconPath(appIcon, true) !== "") {
+      return "image://icon/" + appIcon
+    }
+    if (app && app !== "" && Quickshell.iconPath(app, true) !== "") {
+      return "image://icon/" + app
+    }
+    return ""
   }
 
   property bool isDnd: false
@@ -682,15 +686,15 @@ BarWidget {
           Image {
             id: appIconImg
             anchors.left: parent.left
-            anchors.leftMargin: (model.app !== "omarchy-action") ? Style.space(8) : 0
+            anchors.leftMargin: (model.app !== "omarchy-action" && source != "") ? Style.space(8) : 0
             anchors.verticalCenter: contentCol.verticalCenter
             source: root.getAppIcon(model.app, model.appIcon)
-            width: (model.app !== "omarchy-action") ? Style.space(34) : 0
-            height: (model.app !== "omarchy-action") ? Style.space(34) : 0
+            width: (model.app !== "omarchy-action" && source != "") ? Style.space(34) : 0
+            height: (model.app !== "omarchy-action" && source != "") ? Style.space(34) : 0
             sourceSize.width: Style.space(34)
             sourceSize.height: Style.space(34)
             smooth: true
-            visible: (model.app !== "omarchy-action") && status === Image.Ready
+            visible: (model.app !== "omarchy-action") && source != "" && status === Image.Ready
           }
   
           Column {
@@ -698,7 +702,7 @@ BarWidget {
             anchors.left: appIconImg.right
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.leftMargin: (model.app !== "omarchy-action") ? Style.space(10) : Style.space(12)
+            anchors.leftMargin: (model.app !== "omarchy-action" && appIconImg.source != "") ? Style.space(10) : Style.space(12)
             anchors.rightMargin: Style.space(4)
             anchors.topMargin: Style.space(6)
             spacing: Style.space(4)
