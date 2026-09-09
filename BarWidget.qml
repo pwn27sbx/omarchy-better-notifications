@@ -156,7 +156,7 @@ BarWidget {
 
   Process {
     id: reader
-    command: ["bash", "-c", "cat " + historyDir + "/*.json 2>/dev/null | jq -s '.' 2>/dev/null || echo '[]'"]
+    command: ["bash", "-c", "find " + historyDir + " -maxdepth 1 -name '*.json' -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -rn | head -n 100 | cut -f2- | tr '\\n' '\\0' | xargs -0 -r cat 2>/dev/null | jq -s '.' 2>/dev/null || echo '[]'"]
     running: false
     stdout: StdioCollector {
       waitForEnd: true
@@ -577,7 +577,8 @@ BarWidget {
   
             Text {
               anchors.bottom: parent.bottom
-              text: section.charAt(0).toUpperCase() + section.slice(1)
+              text: String(section.charAt(0).toUpperCase() + section.slice(1)).substring(0, 50)
+              textFormat: Text.PlainText
               font.pixelSize: Style.font.bodySmall
               font.bold: true
               color: root.colorForApp(section)
@@ -643,8 +644,12 @@ BarWidget {
 
                 if (mouse.button === Qt.RightButton) {
                   delegateContainer.isDeleted = true
-                  var targetFile = root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json"
-                  root.bar.run("/usr/bin/rm -f " + targetFile)
+                  var safeId = String(model.originalId).replace(/[^a-zA-Z0-9_-]/g, "")
+                  var safeTs = String(model.timestamp).replace(/[^0-9]/g, "")
+                  if (safeId && safeTs) {
+                    var targetFile = root.historyDir + "/" + safeTs + "-" + safeId + ".json"
+                    root.bar.run("/usr/bin/rm -f '" + targetFile + "'")
+                  }
                   reloadTimer.start()
                   return
                 }
@@ -676,8 +681,12 @@ BarWidget {
               interval: 200
               onTriggered: {
                 delegateContainer.isDeleted = true
-                var targetFile = root.historyDir + "/" + model.timestamp + "-" + model.originalId + ".json"
-                root.bar.run("/usr/bin/rm -f " + targetFile)
+                var safeId = String(model.originalId).replace(/[^a-zA-Z0-9_-]/g, "")
+                var safeTs = String(model.timestamp).replace(/[^0-9]/g, "")
+                if (safeId && safeTs) {
+                  var targetFile = root.historyDir + "/" + safeTs + "-" + safeId + ".json"
+                  root.bar.run("/usr/bin/rm -f '" + targetFile + "'")
+                }
                 reloadTimer.start()
               }
             }
@@ -713,7 +722,8 @@ BarWidget {
             Text {
               anchors.centerIn: parent
               anchors.verticalCenterOffset: 1
-              text: model.app ? model.app.charAt(0).toUpperCase() : "?"
+              text: model.app ? String(model.app.charAt(0).toUpperCase()).substring(0, 1) : "?"
+              textFormat: Text.PlainText
               font.pixelSize: Math.round(Style.font.bodyLarge * 1.2)
               font.bold: true
               color: Color.background
@@ -742,7 +752,8 @@ BarWidget {
                 anchors.left: parent.left
                 anchors.right: timeTxt.left
                 anchors.rightMargin: Style.space(8)
-                text: model.summary || ""
+                text: String(model.summary || "").substring(0, 150)
+                textFormat: Text.PlainText
                 font.pixelSize: Style.font.body
                 font.bold: true
                 color: bar ? bar.foreground : Color.foreground
@@ -754,6 +765,7 @@ BarWidget {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.timeAgo(model.timestamp)
+                textFormat: Text.PlainText
                 font.pixelSize: Style.font.caption
                 color: bar ? bar.foreground : Color.foreground
                 opacity: 0.4
@@ -762,7 +774,8 @@ BarWidget {
   
             Text {
               width: parent.width
-              text: model.body || ""
+              text: String(model.body || "").substring(0, 500)
+              textFormat: Text.PlainText
               font.pixelSize: Style.font.bodySmall
               color: bar ? bar.foreground : Color.foreground
               opacity: 0.7
@@ -783,7 +796,14 @@ BarWidget {
   
               Image {
                 anchors.fill: parent
-                source: model.image ? (model.image.indexOf("file://") === 0 ? model.image : "file://" + model.image) : ""
+                source: {
+                  if (!model.image) return ""
+                  var img = String(model.image).replace("file://", "")
+                  if (img.indexOf("/tmp/") !== 0 && img.indexOf("/home/") !== 0 && img.indexOf("/var/") !== 0) return ""
+                  return "file://" + img
+                }
+                sourceSize.width: Math.min(parent.width * 2, 800)
+                sourceSize.height: 300
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 smooth: true
