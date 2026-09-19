@@ -156,7 +156,7 @@ BarWidget {
 
   Process {
     id: reader
-    command: ["bash", "-c", "find " + historyDir + " -maxdepth 1 -name '*.json' -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -rn | head -n 100 | cut -f2- | tr '\\n' '\\0' | xargs -0 -r cat 2>/dev/null | jq -s '.' 2>/dev/null || echo '[]'"]
+    command: ["timeout", "-k", "1", "3", "python3", Quickshell.env("HOME") + "/.config/omarchy/plugins/hero-notifications/helpers/read_history.py", historyDir]
     running: false
     stdout: StdioCollector {
       waitForEnd: true
