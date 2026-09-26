@@ -90,7 +90,21 @@ BarWidget {
   // ---------------------------------
 
   property string settingsHelperPath: String(Qt.resolvedUrl("helpers/settings.py")).replace(/^file:\/\//, "")
+  property string deleteHelperPath: String(Qt.resolvedUrl("helpers/delete_entry.py")).replace(/^file:\/\//, "")
   property bool settingsLoaded: false
+
+  function deleteEntry(timestamp, originalId) {
+    var safeTs = String(timestamp).replace(/[^0-9]/g, "")
+    var safeId = String(originalId).replace(/[^a-zA-Z0-9_-]/g, "")
+    if (!safeTs || !safeId) return
+    deleteEntryProc.command = ["timeout", "-k", "1", "3", "python3", root.deleteHelperPath, safeTs, safeId, root.historyDir]
+    deleteEntryProc.running = true
+  }
+
+  Process {
+    id: deleteEntryProc
+    running: false
+  }
 
   Process {
     id: loadSettingsProc
@@ -637,12 +651,7 @@ BarWidget {
 
                 if (mouse.button === Qt.RightButton) {
                   delegateContainer.isDeleted = true
-                  var safeId = String(model.originalId).replace(/[^a-zA-Z0-9_-]/g, "")
-                  var safeTs = String(model.timestamp).replace(/[^0-9]/g, "")
-                  if (safeId && safeTs) {
-                    var targetFile = root.historyDir + "/" + safeTs + "-" + safeId + ".json"
-                    root.bar.run("/usr/bin/rm -f '" + targetFile + "'")
-                  }
+                  root.deleteEntry(model.timestamp, model.originalId)
                   reloadTimer.start()
                   return
                 }
@@ -674,12 +683,7 @@ BarWidget {
               interval: 200
               onTriggered: {
                 delegateContainer.isDeleted = true
-                var safeId = String(model.originalId).replace(/[^a-zA-Z0-9_-]/g, "")
-                var safeTs = String(model.timestamp).replace(/[^0-9]/g, "")
-                if (safeId && safeTs) {
-                  var targetFile = root.historyDir + "/" + safeTs + "-" + safeId + ".json"
-                  root.bar.run("/usr/bin/rm -f '" + targetFile + "'")
-                }
+                root.deleteEntry(model.timestamp, model.originalId)
                 reloadTimer.start()
               }
             }
