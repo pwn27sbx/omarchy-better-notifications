@@ -8,8 +8,8 @@ BarWidget {
   id: root
   moduleName: "hero-notifications"
 
-  implicitWidth: 24
-  implicitHeight: root.bar ? root.bar.barSize : 28
+  implicitWidth: button.implicitWidth
+  implicitHeight: button.implicitHeight
 
   property bool opened: false
   property string historyDir: Quickshell.env("HOME") + "/.local/state/omarchy/notifications/history"
@@ -266,16 +266,11 @@ BarWidget {
     }
   }
 
-  WidgetButton {
+  BarIconButton {
     id: button
-    width: 24
-    height: parent.height
-    anchors.verticalCenter: parent.verticalCenter
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.horizontalCenterOffset: -1 // Ajuste milimétrico para alinear el centro visual de la campana con la rayita
+    anchors.fill: parent
     bar: root.bar
     text: root.isDnd ? "\uf1f6" : "\uf0f3" // bell-slash : bell
-    horizontalMargin: 0 
     active: root.opened || (historyModel.count > 0 && !root.isDnd)
     tooltipText: root.tr("Notifications") + " (" + historyModel.count + ")" + (root.isDnd ? " - " + root.tr("Muted") : "")
 
