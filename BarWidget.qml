@@ -13,6 +13,38 @@ BarWidget {
 
   property bool opened: false
   property string historyDir: Quickshell.env("HOME") + "/.local/state/omarchy/notifications/history"
+  property string omarchyPath: Quickshell.env("OMARCHY_PATH") || "/usr/share/omarchy"
+  property string readHistoryHelperPath: String(Qt.resolvedUrl("helpers/read_history.py")).replace(/^file:\/\//, "")
+
+  // Mirrors NotificationLogic.parseExecArgv from the first-party Omarchy
+  // shell: JSON array, non-empty, every element a string, first element
+  // non-empty and not starting with "-". Adds a defensive argument-count
+  // and per-argument length cap on top of the upstream contract.
+  function parseExecArgv(value) {
+    var text = String(value || "")
+    if (!text) return null
+
+    var parsed
+    try {
+      parsed = JSON.parse(text)
+    } catch (e) {
+      return null
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    if (parsed.length > 32) return null
+    for (var i = 0; i < parsed.length; i++) {
+      if (typeof parsed[i] !== "string") return null
+      if (parsed[i].length > 4096) return null
+    }
+    if (!parsed[0] || parsed[0].charAt(0) === "-") return null
+    return parsed
+  }
+
+  function focusApp(appName) {
+    if (!appName) return
+    Quickshell.execDetached([root.omarchyPath + "/bin/omarchy-hyprland-focus-app", String(appName)])
+  }
 
   function colorForApp(appName) {
     var colors = [Color.accent, Color.urgent, "#89b4fa", "#a6e3a1", "#f9e2af", "#f38ba8", "#cba6f7", "#94e2d5", "#f2cdcd", "#b4befe"]
@@ -173,7 +205,7 @@ BarWidget {
 
   Process {
     id: reader
-    command: ["timeout", "-k", "1", "3", "python3", Quickshell.env("HOME") + "/.config/omarchy/plugins/hero-notifications/helpers/read_history.py", historyDir]
+    command: ["timeout", "-k", "1", "3", "python3", root.readHistoryHelperPath, historyDir]
     running: false
     stdout: StdioCollector {
       waitForEnd: true
@@ -341,12 +373,10 @@ BarWidget {
               onClicked: function() {
                 // Actualización optimista para que la interfaz se sienta instantánea sin lag
                 root.isDnd = !root.isDnd
-                
-                if (root.bar) {
-                  root.bar.run("omarchy-shell notifications toggleDnd")
-                  // Quitamos dndChecker.running = true aquí para evitar leer el estado viejo 
-                  // antes de que toggleDnd termine de procesar en el sistema.
-                }
+
+                Quickshell.execDetached(["omarchy-shell", "notifications", "toggleDnd"])
+                // Quitamos dndChecker.running = true aquí para evitar leer el estado viejo
+                // antes de que toggleDnd termine de procesar en el sistema.
               }
             }
           }
@@ -545,12 +575,10 @@ BarWidget {
             onEntered: parent.opacity = 0.9
             onExited: parent.opacity = 0.5
             onClicked: function() {
-              if (root.bar) {
-                root.bar.run("omarchy-shell notifications clear")
-                historyModel.clear()
-                generalModel.clear()
-                mediaModel.clear()
-              }
+              Quickshell.execDetached(["omarchy-shell", "notifications", "clear"])
+              historyModel.clear()
+              generalModel.clear()
+              mediaModel.clear()
             }
           }
         }
@@ -657,22 +685,14 @@ BarWidget {
                 }
                 
                 var executed = false
-                if (model.execArgv && model.execArgv.trim() !== "") {
-                  try {
-                    var cmdArray = JSON.parse(model.execArgv)
-                    if (Array.isArray(cmdArray) && cmdArray.length > 0) {
-                      var escapedStr = ""
-                      for (var j = 0; j < cmdArray.length; j++) {
-                        escapedStr += "'" + String(cmdArray[j]).replace(/'/g, "'\\''") + "' "
-                      }
-                      root.bar.run(escapedStr)
-                      executed = true
-                    }
-                  } catch(e) {}
-                } 
-                
+                var argv = root.parseExecArgv(model.execArgv)
+                if (argv) {
+                  Quickshell.execDetached(["bash", "-lc", 'exec "$@"', "bash"].concat(argv))
+                  executed = true
+                }
+
                 if (!executed && model.app && model.app.trim() !== "") {
-                  root.bar.run("/usr/share/omarchy/bin/omarchy-hyprland-focus-app '" + model.app.replace(/'/g, "'\\''") + "'")
+                  root.focusApp(model.app)
                 }
                 root.opened = false
               }
@@ -793,17 +813,16 @@ BarWidget {
   
               Image {
                 anchors.fill: parent
-                source: {
-                  if (!model.image) return ""
-                  var img = String(model.image).replace("file://", "")
-                  if (img.indexOf("/tmp/") !== 0 && img.indexOf("/home/") !== 0 && img.indexOf("/var/") !== 0) return ""
-                  return "file://" + img
-                }
+                // model.image is already path/containment/size/extension
+                // validated by read_history.py; no further path parsing
+                // is needed here.
+                source: model.image ? "file://" + String(model.image).replace(/^file:\/\//, "") : ""
                 sourceSize.width: Math.min(parent.width * 2, 800)
                 sourceSize.height: 300
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 smooth: true
+                cache: false
               }
             }
           }
