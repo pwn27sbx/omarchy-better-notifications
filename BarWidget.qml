@@ -89,11 +89,12 @@ BarWidget {
   }
   // ---------------------------------
 
-  property string settingsFile: historyDir + "/../hero_settings.json"
+  property string settingsHelperPath: String(Qt.resolvedUrl("helpers/settings.py")).replace(/^file:\/\//, "")
+  property bool settingsLoaded: false
 
   Process {
     id: loadSettingsProc
-    command: ["cat", settingsFile]
+    command: ["timeout", "-k", "1", "3", "python3", root.settingsHelperPath, "get"]
     running: true
     stdout: StdioCollector {
       waitForEnd: true
@@ -102,6 +103,7 @@ BarWidget {
           var cfg = JSON.parse(text)
           if (cfg.splitScreenshots !== undefined) root.splitScreenshots = cfg.splitScreenshots
         } catch(e) {}
+        root.settingsLoaded = true
       }
     }
   }
@@ -109,10 +111,11 @@ BarWidget {
   Process {
     id: saveSettingsProc
     property bool val: false
-    command: ["bash", "-c", "echo '{\"splitScreenshots\":' + (val?'true':'false') + '}' > " + settingsFile]
+    command: ["timeout", "-k", "1", "3", "python3", root.settingsHelperPath, "set", val ? "true" : "false"]
   }
 
   onSplitScreenshotsChanged: {
+    if (!root.settingsLoaded) return
     saveSettingsProc.val = splitScreenshots
     saveSettingsProc.running = true
   }
