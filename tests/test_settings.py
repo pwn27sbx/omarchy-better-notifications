@@ -42,6 +42,40 @@ class SettingsTests(unittest.TestCase):
             out = json.loads(proc.stdout)
             self.assertEqual(out, {"splitScreenshots": False})
 
+    def _write_legacy(self, state_home, payload):
+        legacy_dir = os.path.join(state_home, "omarchy", "notifications")
+        os.makedirs(legacy_dir)
+        path = os.path.join(legacy_dir, "hero_settings.json")
+        with open(path, "w") as f:
+            f.write(payload)
+        return path
+
+    def test_legacy_settings_used_when_new_missing(self):
+        # Settings written by earlier versions must survive the move.
+        with tempfile.TemporaryDirectory() as state_home:
+            self._write_legacy(state_home, '{"splitScreenshots":false}')
+            out = json.loads(run_helper(["get"], env_with_state(state_home)).stdout)
+            self.assertEqual(out, {"splitScreenshots": False})
+
+    def test_new_settings_win_over_legacy(self):
+        with tempfile.TemporaryDirectory() as state_home:
+            env = env_with_state(state_home)
+            self._write_legacy(state_home, '{"splitScreenshots":false}')
+            run_helper(["set", "true"], env)
+            out = json.loads(run_helper(["get"], env).stdout)
+            self.assertEqual(out, {"splitScreenshots": True})
+
+    def test_legacy_symlink_not_followed(self):
+        with tempfile.TemporaryDirectory() as state_home, tempfile.TemporaryDirectory() as outside:
+            target = os.path.join(outside, "x.json")
+            with open(target, "w") as f:
+                f.write('{"splitScreenshots":false}')
+            legacy_dir = os.path.join(state_home, "omarchy", "notifications")
+            os.makedirs(legacy_dir)
+            os.symlink(target, os.path.join(legacy_dir, "hero_settings.json"))
+            out = json.loads(run_helper(["get"], env_with_state(state_home)).stdout)
+            self.assertEqual(out, {"splitScreenshots": True})
+
     def test_write_is_atomic_and_mode_0600(self):
         with tempfile.TemporaryDirectory() as state_home:
             env = env_with_state(state_home)

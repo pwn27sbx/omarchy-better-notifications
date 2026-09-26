@@ -65,21 +65,25 @@ def _ensure_settings_dir():
     return d
 
 
-def get_settings():
-    path = _settings_path()
-    result = dict(DEFAULT_SETTINGS)
+def _legacy_settings_path():
+    # Location used by versions before the settings move; read-only fallback.
+    return os.path.join(_state_home(), "omarchy", "notifications", "hero_settings.json")
+
+
+def _read_settings_file(path):
+    """Return the bounded, validated settings dict at `path`, or None."""
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
     except OSError:
-        return result
+        return None
 
     try:
         try:
             st = os.fstat(fd)
         except OSError:
-            return result
+            return None
         if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid():
-            return result
+            return None
 
         chunks = []
         remaining = MAX_READ_BYTES
@@ -96,11 +100,19 @@ def get_settings():
     try:
         parsed = json.loads(data.decode("utf-8", errors="strict"))
     except (UnicodeDecodeError, json.JSONDecodeError):
-        return result
-
+        return None
     if isinstance(parsed, dict) and isinstance(parsed.get("splitScreenshots"), bool):
-        result["splitScreenshots"] = parsed["splitScreenshots"]
-    return result
+        return {"splitScreenshots": parsed["splitScreenshots"]}
+    return None
+
+
+def get_settings():
+    """Current settings: the plugin's own file, else the legacy one, else defaults."""
+    for path in (_settings_path(), _legacy_settings_path()):
+        found = _read_settings_file(path)
+        if found is not None:
+            return found
+    return dict(DEFAULT_SETTINGS)
 
 
 def set_split_screenshots(value):

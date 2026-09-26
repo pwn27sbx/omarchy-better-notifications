@@ -129,13 +129,9 @@ BarWidget {
     var safeTs = String(timestamp).replace(/[^0-9]/g, "")
     var safeId = String(originalId).replace(/[^a-zA-Z0-9_-]/g, "")
     if (!safeTs || !safeId) return
-    deleteEntryProc.command = ["timeout", "-k", "1", "3", "python3", root.deleteHelperPath, safeTs, safeId, root.historyDir]
-    deleteEntryProc.running = true
-  }
-
-  Process {
-    id: deleteEntryProc
-    running: false
+    // One detached process per deletion (argv, no shell) so quick successive
+    // swipes never coalesce into a single run and drop a delete.
+    Quickshell.execDetached(["timeout", "-k", "1", "3", "python3", root.deleteHelperPath, safeTs, safeId, root.historyDir])
   }
 
   Process {
