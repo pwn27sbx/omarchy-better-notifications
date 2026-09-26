@@ -140,6 +140,12 @@ def _sanitize_entry(raw):
 
 
 def _allowed_image_roots():
+    """Return (spelled, canonical) pairs for the directories images may live in.
+
+    The spelled form is how paths usually appear in notifications (for example
+    $HOME/Pictures even if Pictures is a symlink); the canonical form is where
+    the component walk starts.
+    """
     screenshot_dir = os.environ.get("OMARCHY_SCREENSHOT_DIR")
     if not screenshot_dir:
         pictures_dir = os.environ.get("XDG_PICTURES_DIR")
@@ -151,63 +157,81 @@ def _allowed_image_roots():
         images_dir = os.path.join(home, ".local/state/omarchy/notifications/images")
     roots = []
     for d in (screenshot_dir, images_dir):
-        try:
-            roots.append(os.path.realpath(d))
-        except OSError:
+        if not d or not os.path.isabs(d):
             continue
+        spelled = os.path.normpath(d)
+        roots.append((spelled, os.path.realpath(spelled)))
     return roots
 
 
+def _relative_components(path, root):
+    """Split `path` below `root` into components, or None if not below it."""
+    prefix = root.rstrip(os.sep) + os.sep
+    if not path.startswith(prefix):
+        return None
+    parts = path[len(prefix):].split(os.sep)
+    if not parts or any(p in ("", ".", "..") for p in parts):
+        return None
+    return parts
+
+
+def _open_image_nofollow(canonical_root, parts):
+    """Walk from the canonical root without following any symlink.
+
+    Every intermediate component is opened relative to its parent with
+    O_DIRECTORY | O_NOFOLLOW, and the final one with O_NOFOLLOW, so a link
+    anywhere below the root (or one swapped in mid-walk) fails the open.
+    Returns an fd for the image file; the caller closes it.
+    """
+    dir_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    fd = os.open(canonical_root, dir_flags)
+    try:
+        for part in parts[:-1]:
+            next_fd = os.open(part, dir_flags, dir_fd=fd)
+            os.close(fd)
+            fd = next_fd
+        file_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+        return os.open(parts[-1], file_flags, dir_fd=fd)
+    finally:
+        os.close(fd)
+
+
 def _validate_image_path(candidate):
-    """Return the validated candidate path, or "" if it fails validation."""
+    """Return the canonical path of a trusted image, or "" if it fails.
+
+    Accepted only when the path is absolute, has no "." / ".." components,
+    lies below an allowed root, contains no symlink below that root, and
+    ends in a regular, user-owned .png/.jpg/.jpeg file of at most 20 MiB.
+    The returned path is the verified canonical one, never the raw input.
+    """
     if not candidate:
         return ""
-    stripped = candidate
-    if stripped.startswith("file://"):
-        stripped = stripped[len("file://"):]
-    if not stripped:
+    path = candidate[len("file://"):] if candidate.startswith("file://") else candidate
+    if not path or not os.path.isabs(path):
         return ""
-    ext = os.path.splitext(stripped)[1].lower()
-    if ext not in IMAGE_EXTENSIONS:
-        return ""
-    try:
-        real = os.path.realpath(stripped)
-    except OSError:
-        return ""
-    roots = _allowed_image_roots()
-    if not any(real == root or real.startswith(root + os.sep) for root in roots):
+    if os.path.splitext(path)[1].lower() not in IMAGE_EXTENSIONS:
         return ""
 
-    parent_dir = os.path.dirname(real)
-    base_name = os.path.basename(real)
-    if not base_name:
-        return ""
-    try:
-        parent_fd = os.open(
-            parent_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
-        )
-    except OSError:
-        return ""
-    fd = None
-    try:
+    for spelled, canonical in _allowed_image_roots():
+        parts = _relative_components(path, spelled)
+        if parts is None and canonical != spelled:
+            parts = _relative_components(path, canonical)
+        if parts is None:
+            continue
         try:
-            fd = os.open(
-                base_name,
-                os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
-                dir_fd=parent_fd,
-            )
+            fd = _open_image_nofollow(canonical, parts)
         except OSError:
             return ""
-        st = os.fstat(fd)
+        try:
+            st = os.fstat(fd)
+        finally:
+            os.close(fd)
         if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid():
             return ""
         if st.st_size > MAX_IMAGE_BYTES:
             return ""
-    finally:
-        if fd is not None:
-            os.close(fd)
-        os.close(parent_fd)
-    return candidate
+        return os.path.join(canonical, *parts)
+    return ""
 
 
 def _derive_omarchy_action_image(entry):
@@ -227,7 +251,11 @@ def _apply_image_validation(entry):
     candidate = entry.get("image") or ""
     if not candidate and entry.get("app") == "omarchy-action":
         candidate = _derive_omarchy_action_image(entry)
-    entry["image"] = _validate_image_path(candidate)
+    try:
+        entry["image"] = _validate_image_path(candidate)
+    except Exception:
+        # A failure on one image only blanks that thumbnail.
+        entry["image"] = ""
     return entry
 
 

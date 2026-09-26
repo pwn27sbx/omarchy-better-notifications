@@ -228,6 +228,61 @@ class ReadHistoryFunctionalTests(unittest.TestCase):
             out = json.loads(proc.stdout)
             self.assertEqual(out[0]["image"], good_img)
 
+    def _run_with_roots(self, history_dir, screenshots, images):
+        env = dict(os.environ)
+        env["OMARCHY_SCREENSHOT_DIR"] = screenshots
+        env["HERO_NOTIFICATIONS_IMAGES_DIR"] = images
+        proc = subprocess.run(
+            [sys.executable, HELPER, history_dir], capture_output=True, text=True, env=env, timeout=10
+        )
+        return json.loads(proc.stdout)
+
+    def test_image_with_symlinked_intermediate_dir_rejected(self):
+        # A symlinked directory inside an allowed root must not be traversed,
+        # even when its target is also inside the root: validation walks every
+        # component without following links.
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as screenshots, tempfile.TemporaryDirectory() as images:
+            real_sub = os.path.join(screenshots, "real")
+            os.mkdir(real_sub)
+            with open(os.path.join(real_sub, "shot.png"), "wb") as f:
+                f.write(b"\x89PNG\r\n")
+            os.symlink(real_sub, os.path.join(screenshots, "link"))
+            write_entry(d, "100", "1", sample_payload(image=os.path.join(screenshots, "link", "shot.png")))
+            out = self._run_with_roots(d, screenshots, images)
+            self.assertEqual(out[0]["image"], "")
+
+    def test_image_with_dotdot_rejected(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as screenshots, tempfile.TemporaryDirectory() as images:
+            sub = os.path.join(screenshots, "sub")
+            os.mkdir(sub)
+            with open(os.path.join(screenshots, "shot.png"), "wb") as f:
+                f.write(b"\x89PNG\r\n")
+            write_entry(d, "100", "1", sample_payload(image=os.path.join(sub, "..", "shot.png")))
+            out = self._run_with_roots(d, screenshots, images)
+            self.assertEqual(out[0]["image"], "")
+
+    def test_image_output_is_canonical_path(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as screenshots, tempfile.TemporaryDirectory() as images:
+            good_img = os.path.join(screenshots, "shot.png")
+            with open(good_img, "wb") as f:
+                f.write(b"\x89PNG\r\n")
+            write_entry(d, "100", "1", sample_payload(image="file://" + good_img))
+            out = self._run_with_roots(d, screenshots, images)
+            self.assertEqual(out[0]["image"], good_img)
+
+    def test_image_validation_error_does_not_drop_history(self):
+        # An unexpected failure while validating one entry's image must only
+        # blank that image, not discard the whole history.
+        original = read_history._validate_image_path
+        def boom(_candidate):
+            raise RuntimeError("unexpected")
+        read_history._validate_image_path = boom
+        try:
+            entry = read_history._apply_image_validation({"app": "x", "image": "/a.png", "execArgv": ""})
+        finally:
+            read_history._validate_image_path = original
+        self.assertEqual(entry["image"], "")
+
     def test_sorted_newest_first_by_filename_timestamp(self):
         with tempfile.TemporaryDirectory() as d:
             write_entry(d, "100", "1", sample_payload())
