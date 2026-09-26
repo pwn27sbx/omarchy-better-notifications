@@ -176,18 +176,8 @@ BarWidget {
           
           if (appStr === "omarchy-action" && (sumStr.indexOf("screenshot") !== -1 || sumStr.indexOf("screenrecording") !== -1 || sumStr.indexOf("captura") !== -1 || sumStr.indexOf("grabación") !== -1)) {
             isMedia = true
-            // Extraer la ruta de la imagen desde execArgv si no viene en el campo image
-            if (!n.image && n.execArgv) {
-              try {
-                var args = JSON.parse(n.execArgv)
-                if (Array.isArray(args) && args.length > 1) {
-                  var filepath = args[args.length - 1]
-                  if (filepath.indexOf(".png") !== -1 || filepath.indexOf(".jpg") !== -1) {
-                    n.image = filepath
-                  }
-                }
-              } catch(e) {}
-            }
+            // n.image is already derived and validated by read_history.py
+            // (path containment, no-follow open, size/extension checks).
           }
 
           if (root.splitScreenshots && isMedia) {
