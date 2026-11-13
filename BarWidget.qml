@@ -183,14 +183,25 @@ BarWidget {
     onTriggered: dndChecker.running = true
   }
 
+  // Lifecycle methods used by Omarchy's shell IPC for bar widgets.
+  // `omarchy-shell shell toggle hero-notifications` routes here through
+  // the live bar-widget instance, so this works across bar/plugin reloads.
+  function open() {
+    if (opened) return
+    opened = true
+    reader.running = true
+    dndChecker.running = true
+  }
+
+  function close() {
+    if (!opened) return
+    opened = false
+    showSettings = false
+  }
+
   function toggle() {
-    opened = !opened
-    if (opened) {
-      reader.running = true
-      dndChecker.running = true
-    } else {
-      showSettings = false
-    }
+    if (opened) close()
+    else open()
   }
 
   ListModel { id: historyModel }
